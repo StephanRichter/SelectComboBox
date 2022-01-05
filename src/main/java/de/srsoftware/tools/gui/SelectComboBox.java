@@ -1,8 +1,7 @@
 package de.srsoftware.tools.gui;
 
+import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.Collection;
@@ -10,12 +9,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Vector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,84 +31,111 @@ public class SelectComboBox extends JComboBox<Object> {
 	}
 
 	private static final long serialVersionUID = -3123598811223301887L;
-	private List<Object> elements = new Vector<>();
-	private JTextField textField;
+	private Collection<? extends Object> elements = new Vector<>();
+	private JTextField inputField;
 	private HashSet<TextListener> textListeners = new HashSet<>();
 
-	public SelectComboBox(List<Object> elements) {
+	public SelectComboBox(Collection<? extends Object> elements) {
 		super();
 		setElements(elements);
 		setEditable(true);
-		textField = (JTextField) getEditor().getEditorComponent();
-
-		textField.addKeyListener(new KeyAdapter() {			
-			public void keyReleased(KeyEvent key) {
-				switch (key.getKeyChar()) {
-					case KeyEvent.VK_ESCAPE:
-					case KeyEvent.CHAR_UNDEFINED:
-						break;
-					default:
-						filterText();			
-				}
+		inputField = (JTextField) getEditor().getEditorComponent();
+		inputField.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyReleased(KeyEvent e) {
+				handleKey(e);
 			}
 		});
-		addItemListener(new ItemListener() {
+		inputField.getDocument().addDocumentListener(new DocumentListener() {
 			
 			@Override
-			public void itemStateChanged(ItemEvent arg0) {				
-				textListeners.forEach(l -> l.textUpdated(arg0.getItem().toString()));
+			public void removeUpdate(DocumentEvent arg0) {}
+			
+			@Override
+			public void insertUpdate(DocumentEvent arg0) {
+				textListeners.forEach(l -> l.textUpdated(inputField.getText()));		
 			}
+			
+			@Override
+			public void changedUpdate(DocumentEvent arg0) {}
 		});
-		if (!elements.isEmpty()) textField.setText(elements.get(0).toString());
 	}
-	
-	@Override
-	public void addItem(Object item) {
-		elements.add(item);
-	}
-	
-	public void comboBoxFilter(String enteredText) {		
-		String lower = enteredText.toLowerCase();
-		List<Object> filterArray  = elements.stream().filter(elem -> elem.toString().toLowerCase().contains(lower)).collect(Collectors.toList());
-		if (filterArray.size() > 0) {
-			DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) getModel();
-			model.removeAllElements();
-			model.addElement("");
-			filterArray.forEach(model::addElement);
+		
 
-			textField.setText(enteredText);
-			if (!isPopupVisible()) showPopup();			
-		} else {
-			if (isPopupVisible()) hidePopup();
+	
+	protected void handleKey(KeyEvent e) {
+		//LOG.debug("handleKey({})",e);
+		int code = e.getKeyCode();
+		switch (code) {
+			case KeyEvent.VK_ESCAPE:				
+			case KeyEvent.VK_KP_UP:
+				break;
+			case KeyEvent.VK_ENTER:
+				hidePopup();
+				break;
+			case KeyEvent.VK_DOWN:
+				if (!inputField.getText().isEmpty()) break;
+			default:
+				showFiltered();
+				break;
+		}		
+	}
+
+
+	private void showFiltered() {
+		String text = inputField.getText();
+		hidePopup();
+		if (elements == null || elements.isEmpty()) {
+			LOG.info("No items to display!");
+			return;
 		}
-		textListeners.forEach(l -> l.textUpdated(enteredText == null ? null : enteredText.trim()));		
+		String lower = text.toLowerCase();		
+		Stream<String> stream = elements.stream().map(Object::toString).filter(s -> !s.isBlank());
+		if (lower.isEmpty()) {
+			LOG.debug("lower is blank!");
+		} else {
+			stream = stream.filter(element -> element.toString().toLowerCase().contains(lower));
+		}
+		List<String> filtered = stream.map(String::trim).distinct().sorted().collect(Collectors.toList());
+		DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) getModel();
+		model.removeAllElements();
+		if (!filtered.isEmpty()) {
+			model.addAll(filtered);		
+			showPopup();
+		}
+		inputField.setText(text);
+		
 	}
-	
-	protected void filterText() {
-		SwingUtilities.invokeLater(() -> comboBoxFilter(textField.getText()));
-	}
-	
+
+
+
 	public SelectComboBox onUpdateText(TextListener textListener) {
 		textListeners.add(textListener);
 		return this;
 	}
 
 
-	public void setElements(Collection<Object> values) {
-		LOG.debug("elements: {}",elements.getClass());
-		elements.clear();
-		elements.add("");
-		elements.addAll(values);
+	public void setElements(Collection<? extends Object> values) {
+		//LOG.debug("elements: {}",elements.getClass());
+		this.elements = values;
 	}
 	
 	public static void main(String[] args) {
+		List<String> elements = List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss");
+		
 		JFrame frame = new JFrame();
 		frame.setPreferredSize(new Dimension(600, 400));
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setLayout(new BorderLayout());
+		
+		
+		SelectComboBox select = new SelectComboBox(elements).onUpdateText(tx -> LOG.debug("Updated text: '{}'",tx));
+		frame.add(select,BorderLayout.NORTH);
+		
+		JLabel textDisplay = new JLabel();
+		textDisplay.setPreferredSize(new Dimension(800,600));
+		frame.add(textDisplay,BorderLayout.CENTER);
 
-		List<Object> elements = List.of("Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss");
-
-		frame.add(new SelectComboBox(elements).onUpdateText(tx -> LOG.debug("Updated text: {}",tx)));
 		frame.pack();
 		frame.setVisible(true);
 	}
