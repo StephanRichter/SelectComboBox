@@ -26,6 +26,10 @@ public class SelectComboBox extends JComboBox<Object> {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SelectComboBox.class);
 	
+	public interface EnterListener{
+		public void textEntered(String newText);
+	}
+
 	public interface TextListener{
 		public void textUpdated(String newText);
 	}
@@ -33,6 +37,7 @@ public class SelectComboBox extends JComboBox<Object> {
 	private static final long serialVersionUID = -3123598811223301887L;
 	private Collection<? extends Object> elements = new Vector<>();
 	private JTextField inputField;
+	private HashSet<EnterListener> enterListeners = new HashSet<>();
 	private HashSet<TextListener> textListeners = new HashSet<>();
 
 	public SelectComboBox(Collection<? extends Object> elements) {
@@ -65,16 +70,21 @@ public class SelectComboBox extends JComboBox<Object> {
 	
 	protected void handleKey(KeyEvent e) {
 		//LOG.debug("handleKey({})",e);
-		int code = e.getKeyCode();
-		switch (code) {
+		String tx = inputField.getText();
+		switch (e.getKeyCode()) {
 			case KeyEvent.VK_ESCAPE:				
 			case KeyEvent.VK_KP_UP:
+			case KeyEvent.VK_HOME:
+			case KeyEvent.VK_END:
+			case KeyEvent.VK_SHIFT:
+			case KeyEvent.VK_CONTROL:
 				break;
 			case KeyEvent.VK_ENTER:
 				hidePopup();
+				enterListeners.forEach(l -> l.textEntered(tx));
 				break;
 			case KeyEvent.VK_DOWN:
-				if (!inputField.getText().isEmpty()) break;
+				if (!tx.isEmpty()) break;
 			default:
 				showFiltered();
 				break;
@@ -110,7 +120,12 @@ public class SelectComboBox extends JComboBox<Object> {
 
 
 	public SelectComboBox onUpdateText(TextListener textListener) {
-		textListeners.add(textListener);
+		textListeners.add(textListener);		
+		return this;
+	}
+	
+	public SelectComboBox onEnter(EnterListener enterListener) {
+		enterListeners.add(enterListener);
 		return this;
 	}
 
@@ -121,20 +136,23 @@ public class SelectComboBox extends JComboBox<Object> {
 	}
 	
 	public static void main(String[] args) {
-		List<String> elements = List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss");
 		
 		JFrame frame = new JFrame();
 		frame.setPreferredSize(new Dimension(600, 400));
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setLayout(new BorderLayout());
 		
-		
-		SelectComboBox select = new SelectComboBox(elements).onUpdateText(tx -> LOG.debug("Updated text: '{}'",tx));
-		frame.add(select,BorderLayout.NORTH);
-		
-		JLabel textDisplay = new JLabel();
+		JLabel textDisplay = new JLabel("<html>");
 		textDisplay.setPreferredSize(new Dimension(800,600));
 		frame.add(textDisplay,BorderLayout.CENTER);
+
+		List<String> elements = List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss");
+		
+		SelectComboBox select = new SelectComboBox(elements)
+			.onUpdateText(tx -> LOG.debug("Current text: {}",tx))
+			.onEnter(entered -> textDisplay.setText(textDisplay.getText()+entered+"<br/>"));
+		frame.add(select,BorderLayout.NORTH);
+		
 
 		frame.pack();
 		frame.setVisible(true);
