@@ -8,6 +8,7 @@ import java.awt.event.KeyEvent;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Vector;
 import java.util.stream.Collectors;
 
 import javax.swing.DefaultComboBoxModel;
@@ -28,13 +29,13 @@ public class SelectComboBox extends JComboBox<Object> {
 	}
 
 	private static final long serialVersionUID = -3123598811223301887L;
-	private List<Object> elements;
+	private List<Object> elements = new Vector<>();
 	private JTextField textField;
 	private HashSet<TextListener> textListeners = new HashSet<>();
 
 	public SelectComboBox(List<Object> elements) {
 		super();
-		this.elements = elements;
+		setElements(elements);
 		setEditable(true);
 		textField = (JTextField) getEditor().getEditorComponent();
 
@@ -70,6 +71,7 @@ public class SelectComboBox extends JComboBox<Object> {
 		if (filterArray.size() > 0) {
 			DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) getModel();
 			model.removeAllElements();
+			model.addElement("");
 			filterArray.forEach(model::addElement);
 
 			textField.setText(enteredText);
@@ -93,6 +95,7 @@ public class SelectComboBox extends JComboBox<Object> {
 	public void setElements(Collection<Object> values) {
 		LOG.debug("elements: {}",elements.getClass());
 		elements.clear();
+		elements.add("");
 		elements.addAll(values);
 	}
 	
