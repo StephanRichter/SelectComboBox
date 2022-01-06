@@ -148,9 +148,10 @@ public class SelectComboBox extends JComboBox<Object> {
 
 
 
-	public void setElements(Collection<? extends Object> values) {
+	public SelectComboBox setElements(Collection<? extends Object> values) {
 		//LOG.debug("elements: {}",elements.getClass());
 		this.elements = values;
+		return this;
 	}
 	
 	public static void main(String[] args) {
