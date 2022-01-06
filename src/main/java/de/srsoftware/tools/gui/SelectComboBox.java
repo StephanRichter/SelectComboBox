@@ -26,8 +26,12 @@ public class SelectComboBox extends JComboBox<Object> {
 	
 	private static final Logger LOG = LoggerFactory.getLogger(SelectComboBox.class);
 	
+	public interface DeleteListener{
+		public void textDeleted(String deletedText);
+	}
+	
 	public interface EnterListener{
-		public void textEntered(String newText);
+		public void textEntered(String enteredText);
 	}
 
 	public interface TextListener{
@@ -37,6 +41,7 @@ public class SelectComboBox extends JComboBox<Object> {
 	private static final long serialVersionUID = -3123598811223301887L;
 	private Collection<? extends Object> elements = new Vector<>();
 	private JTextField inputField;
+	private HashSet<DeleteListener> deleteListeners = new HashSet<>();
 	private HashSet<EnterListener> enterListeners = new HashSet<>();
 	private HashSet<TextListener> textListeners = new HashSet<>();
 
@@ -77,7 +82,14 @@ public class SelectComboBox extends JComboBox<Object> {
 			case KeyEvent.VK_HOME:
 			case KeyEvent.VK_END:
 			case KeyEvent.VK_SHIFT:
-			case KeyEvent.VK_CONTROL:
+			case KeyEvent.VK_CONTROL:			
+				break;
+			case KeyEvent.VK_DELETE:
+				if ((e.getModifiersEx() & KeyEvent.SHIFT_DOWN_MASK) > 0) {
+					deleteListeners.forEach(l -> l.textDeleted(tx));
+					inputField.setText("");
+					hidePopup();
+				}
 				break;
 			case KeyEvent.VK_ENTER:
 				hidePopup();
@@ -116,18 +128,24 @@ public class SelectComboBox extends JComboBox<Object> {
 		inputField.setText(text);
 		
 	}
+	
 
+	public SelectComboBox onDelete(DeleteListener deleteListener) {
+		deleteListeners.add(deleteListener);
+		return this;
+	}
 
+	public SelectComboBox onEnter(EnterListener enterListener) {
+		enterListeners.add(enterListener);
+		return this;
+	}
 
 	public SelectComboBox onUpdateText(TextListener textListener) {
 		textListeners.add(textListener);		
 		return this;
 	}
 	
-	public SelectComboBox onEnter(EnterListener enterListener) {
-		enterListeners.add(enterListener);
-		return this;
-	}
+
 
 
 	public void setElements(Collection<? extends Object> values) {
@@ -146,11 +164,13 @@ public class SelectComboBox extends JComboBox<Object> {
 		textDisplay.setPreferredSize(new Dimension(800,600));
 		frame.add(textDisplay,BorderLayout.CENTER);
 
-		List<String> elements = List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss");
+		HashSet<String> elements = new HashSet<>();
+		elements.addAll(List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss"));
 		
 		SelectComboBox select = new SelectComboBox(elements)
 			.onUpdateText(tx -> LOG.debug("Current text: {}",tx))
-			.onEnter(entered -> textDisplay.setText(textDisplay.getText()+entered+"<br/>"));
+			.onEnter(entered -> textDisplay.setText(textDisplay.getText()+entered+"<br/>"))
+			.onDelete(elements::remove);
 		frame.add(select,BorderLayout.NORTH);
 		
 

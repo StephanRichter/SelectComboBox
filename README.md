@@ -16,12 +16,14 @@ Looking for a Java Swing text field with autocompltion? Here it is:
 		frame.add(textDisplay,BorderLayout.CENTER);
 
     /* provide a list of options */
-		List<String> elements = List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss");
+		HashSet<String> elements = new HashSet<>();
+		elements.addAll(List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss"));
 		
     /* create input field */
 		SelectComboBox select = new SelectComboBox(elements)
 			.onUpdateText(tx -> LOG.debug("Current text: {}",tx))
-			.onEnter(entered -> textDisplay.setText(textDisplay.getText()+entered+"<br/>"));
+			.onEnter(entered -> textDisplay.setText(textDisplay.getText()+entered+"<br/>"))
+			.onDelete(elements::remove);
 		frame.add(select,BorderLayout.NORTH);
     
 		frame.pack();
