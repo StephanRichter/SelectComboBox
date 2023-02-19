@@ -56,19 +56,6 @@ public class SelectComboBox extends JComboBox<Object> {
 				handleKey(e);
 			}
 		});
-		inputField.getDocument().addDocumentListener(new DocumentListener() {
-			
-			@Override
-			public void removeUpdate(DocumentEvent arg0) {}
-			
-			@Override
-			public void insertUpdate(DocumentEvent arg0) {
-				textListeners.forEach(l -> l.textUpdated(inputField.getText()));		
-			}
-			
-			@Override
-			public void changedUpdate(DocumentEvent arg0) {}
-		});
 	}
 		
 
@@ -100,7 +87,8 @@ public class SelectComboBox extends JComboBox<Object> {
 			default:
 				showFiltered();
 				break;
-		}		
+		}
+		textListeners.forEach(l -> l.textUpdated(tx));
 	}
 
 
@@ -126,7 +114,7 @@ public class SelectComboBox extends JComboBox<Object> {
 			showPopup();
 		}
 		inputField.setText(text);
-		
+
 	}
 	
 
