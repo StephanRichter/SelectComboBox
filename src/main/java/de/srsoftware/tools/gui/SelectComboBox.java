@@ -59,6 +59,9 @@ public class SelectComboBox extends JComboBox<Object> {
 	}
 		
 
+	public String getText(){
+		return inputField.getText();
+	}
 	
 	protected void handleKey(KeyEvent e) {
 		//LOG.debug("handleKey({})",e);
@@ -92,29 +95,29 @@ public class SelectComboBox extends JComboBox<Object> {
 	}
 
 
-	private void showFiltered() {
-		String text = inputField.getText();
-		hidePopup();
-		if (elements == null || elements.isEmpty()) {
-			LOG.info("No items to display!");
-			return;
-		}
-		String lower = text.toLowerCase();		
-		Stream<String> stream = elements.stream().map(Object::toString).filter(s -> !s.isBlank());
-		if (lower.isEmpty()) {
-			LOG.debug("lower is blank!");
-		} else {
-			stream = stream.filter(element -> element.toString().toLowerCase().contains(lower));
-		}
-		List<String> filtered = stream.map(String::trim).distinct().sorted().collect(Collectors.toList());
-		DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) getModel();
-		model.removeAllElements();
-		if (!filtered.isEmpty()) {
-			model.addAll(filtered);		
-			showPopup();
-		}
-		inputField.setText(text);
+	public static void main(String[] args) {
 
+		JFrame frame = new JFrame();
+		frame.setPreferredSize(new Dimension(600, 400));
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setLayout(new BorderLayout());
+
+		JLabel textDisplay = new JLabel("<html>");
+		textDisplay.setPreferredSize(new Dimension(800,600));
+		frame.add(textDisplay,BorderLayout.CENTER);
+
+		HashSet<String> elements = new HashSet<>();
+		elements.addAll(List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss"));
+
+		SelectComboBox select = new SelectComboBox(elements)
+				.onUpdateText(tx -> LOG.debug("Current text: {}",tx))
+				.onEnter(entered -> textDisplay.setText(textDisplay.getText()+entered+"<br/>"))
+				.onDelete(elements::remove);
+		frame.add(select,BorderLayout.NORTH);
+
+
+		frame.pack();
+		frame.setVisible(true);
 	}
 	
 
@@ -141,30 +144,37 @@ public class SelectComboBox extends JComboBox<Object> {
 		this.elements = values;
 		return this;
 	}
-	
-	public static void main(String[] args) {
-		
-		JFrame frame = new JFrame();
-		frame.setPreferredSize(new Dimension(600, 400));
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		frame.setLayout(new BorderLayout());
-		
-		JLabel textDisplay = new JLabel("<html>");
-		textDisplay.setPreferredSize(new Dimension(800,600));
-		frame.add(textDisplay,BorderLayout.CENTER);
 
-		HashSet<String> elements = new HashSet<>();
-		elements.addAll(List.of("", "Lion", "Lion ", " Lion", "LionKing", "Mufasa", "Nala", "KingNala", "Animals", "Anims", "Fish", "Jelly Fish", "I am the boss"));
-		
-		SelectComboBox select = new SelectComboBox(elements)
-			.onUpdateText(tx -> LOG.debug("Current text: {}",tx))
-			.onEnter(entered -> textDisplay.setText(textDisplay.getText()+entered+"<br/>"))
-			.onDelete(elements::remove);
-		frame.add(select,BorderLayout.NORTH);
-		
-
-		frame.pack();
-		frame.setVisible(true);
+	public SelectComboBox setText(String newVal){
+		inputField.setText(newVal);
+		return this;
 	}
+
+	private void showFiltered() {
+		String text = inputField.getText();
+		hidePopup();
+		if (elements == null || elements.isEmpty()) {
+			LOG.info("No items to display!");
+			return;
+		}
+		String lower = text.toLowerCase();
+		Stream<String> stream = elements.stream().map(Object::toString).filter(s -> !s.isBlank());
+		if (lower.isEmpty()) {
+			LOG.debug("lower is blank!");
+		} else {
+			stream = stream.filter(element -> element.toString().toLowerCase().contains(lower));
+		}
+		List<String> filtered = stream.map(String::trim).distinct().sorted().collect(Collectors.toList());
+		DefaultComboBoxModel<Object> model = (DefaultComboBoxModel<Object>) getModel();
+		model.removeAllElements();
+		if (!filtered.isEmpty()) {
+			model.addAll(filtered);
+			showPopup();
+		}
+		inputField.setText(text);
+
+	}
+	
+
 
 }
